@@ -10,6 +10,6 @@ import java.util.List;
 @AllArgsConstructor
 
 public class FraudDetectionResult {
-    private List<FraudResult> résultats;
+    private List<FraudResultDto> résultats;
 
 }

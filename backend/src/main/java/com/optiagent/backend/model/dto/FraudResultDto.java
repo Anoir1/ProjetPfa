@@ -10,7 +10,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 
-public class FraudResult {
+public class FraudResultDto {
     private String nom_fichier;
     @JsonProperty("Nom du commerce")
     private String nomDuCommerce;

@@ -1,5 +1,6 @@
 package com.optiagent.backend.service;
 
+import com.optiagent.backend.model.FraudResult;
 import com.optiagent.backend.model.dto.FraudDetectionResult;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
@@ -15,6 +16,7 @@ import java.util.List;
 @Service
 public class FraudService {
     private String FASTAPI_URL="http://127.0.0.1:8000/detecter_fraude/";
+    private FraudResult fraudresultentity;
 
 
     RestTemplate restTemplate=new RestTemplate();
@@ -61,5 +63,9 @@ public class FraudService {
             throw new RuntimeException("FastAPI returned status: " + response.getStatusCode());
         }
 
+
         return response.getBody();
-    }}
+    }
+
+
+}

@@ -434,25 +434,6 @@ export default function ExecuteAgentPage() {
 
         console.log("Envoi de la requête avec le token:", user.token.substring(0, 10) + "...");
         
-        // Vérifier les fichiers avant l'envoi
-        console.log("Détails des fichiers à envoyer:");
-        console.log("Nombre de factures:", invoiceFiles.length);
-        invoiceFiles.forEach((file, index) => {
-          console.log(`Facture ${index + 1}:`, {
-            name: file.name,
-            type: file.type,
-            size: file.size
-          });
-        });
-        
-        if (missionOrderFile) {
-          console.log("Ordre de mission:", {
-            name: missionOrderFile.name,
-            type: missionOrderFile.type,
-            size: missionOrderFile.size
-          });
-        }
-        
         // Envoyer la requête à l'API Spring
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -466,19 +447,13 @@ export default function ExecuteAgentPage() {
         
         if (!response.ok) {
           let errorMessage;
-          console.log("Statut de la réponse:", response.status);
-          console.log("Headers de la réponse:", Object.fromEntries(response.headers.entries()));
-          
           try {
             const errorData = await response.json();
-            console.log("Données d'erreur:", errorData);
             errorMessage = errorData.message || 'Une erreur est survenue';
           } catch (e) {
-            console.log("Erreur lors de la lecture du JSON:", e);
             // Si la réponse n'est pas du JSON, on utilise le statut HTTP
             errorMessage = `Erreur HTTP ${response.status}`;
           }
-          
           console.error("Réponse d'erreur complète:", errorMessage);
           throw new Error(`Erreur lors de l'analyse: ${response.status} - ${errorMessage}`);
         }
