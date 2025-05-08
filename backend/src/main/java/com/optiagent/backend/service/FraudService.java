@@ -17,7 +17,7 @@ public class FraudService {
     private String FASTAPI_URL="http://127.0.0.1:8000/detecter_fraude/";
 
 
-    RestTemplate restTemplate=new RestTemplate();
+    RestTemplate restTemplate;
     public FraudService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
@@ -28,22 +28,20 @@ public class FraudService {
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 
-        // Convert factures to resources
         for (MultipartFile file : factures) {
             ByteArrayResource resource = new ByteArrayResource(file.getBytes()) {
                 @Override
                 public String getFilename() {
-                    return file.getOriginalFilename(); // Required by FastAPI
+                    return file.getOriginalFilename();
                 }
             };
             body.add("factures", resource);
         }
 
-        // Convert ordre de mission to resource
         ByteArrayResource ordreResource = new ByteArrayResource(ordreDeMission.getBytes()) {
             @Override
             public String getFilename() {
-                return ordreDeMission.getOriginalFilename(); // Required by FastAPI
+                return ordreDeMission.getOriginalFilename();
             }
         };
         body.add("ordre_mission", ordreResource);
