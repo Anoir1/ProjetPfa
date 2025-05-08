@@ -13,7 +13,7 @@ public class Agent {
     private String name;
     private String role;
     private LocalDateTime createdAt;
-    private List<Invoice> invoices = new ArrayList<>();
+    private List<String> invoiceFileIds = new ArrayList<>(); // IDs des fichiers de factures
     private MissionOrder missionOrder;
     private String userId; // ID de l'utilisateur propriétaire
 
@@ -61,16 +61,16 @@ public class Agent {
         this.createdAt = createdAt;
     }
 
-    public List<Invoice> getInvoices() {
-        return invoices;
+    public List<String> getInvoiceFileIds() {
+        return invoiceFileIds;
     }
 
-    public void setInvoices(List<Invoice> invoices) {
-        this.invoices = invoices;
+    public void setInvoiceFileIds(List<String> invoiceFileIds) {
+        this.invoiceFileIds = invoiceFileIds;
     }
 
-    public void addInvoice(Invoice invoice) {
-        this.invoices.add(invoice);
+    public void addInvoiceFileId(String invoiceFileId) {
+        this.invoiceFileIds.add(invoiceFileId);
     }
 
     public String getUserId() {

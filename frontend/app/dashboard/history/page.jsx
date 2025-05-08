@@ -29,8 +29,22 @@ export default function HistoryPage() {
         
         // Charger toutes les exécutions
         const executionsData = await executionService.getAllExecutions();
-        setExecutions(executionsData);
-        setFilteredExecutions(executionsData);
+        
+        // Trier les exécutions de la plus récente à la plus ancienne
+        const sortedExecutions = executionsData.sort((a, b) => {
+          const dateA = new Date(a.startTime || 0);
+          const dateB = new Date(b.startTime || 0);
+          return dateB - dateA; // Tri décroissant (plus récent au plus ancien)
+        });
+        
+        // Normaliser les statuts pour s'assurer qu'ils sont dans un format cohérent
+        const normalizedExecutions = sortedExecutions.map(execution => ({
+          ...execution,
+          status: normalizeStatus(execution.status)
+        }));
+        
+        setExecutions(normalizedExecutions);
+        setFilteredExecutions(normalizedExecutions);
         
         // Charger tous les agents pour pouvoir afficher leurs noms
         const agentsData = await agentService.getAllAgents();
@@ -67,6 +81,22 @@ export default function HistoryPage() {
       setFilteredExecutions(filtered);
     }
   }, [searchTerm, executions, agents])
+
+  // Fonction pour normaliser les statuts d'exécution
+  const normalizeStatus = (status) => {
+    if (!status) return "EN_COURS";
+    
+    // Convertir en majuscules et supprimer les espaces
+    const normalizedStatus = status.toUpperCase().trim();
+    
+    // Mapper les différentes variantes possibles
+    if (normalizedStatus.includes("TERMIN")) return "TERMINÉ";
+    if (normalizedStatus.includes("ECHEC") || normalizedStatus.includes("ÉCHOU") || normalizedStatus.includes("ECHOU")) return "ÉCHOUÉ";
+    if (normalizedStatus.includes("COURS") || normalizedStatus.includes("RUNNING") || normalizedStatus === "RUN") return "EN_COURS";
+    
+    // Par défaut, retourner le statut tel quel
+    return status;
+  };
 
   const handleViewExecution = (executionId) => {
     router.push(`/dashboard/execute-agent?executionId=${executionId}`)
@@ -250,7 +280,10 @@ function HistoryList({ executions, onViewExecution, getAgentName }) {
                 }
                 className="ml-2"
               >
-                {execution.status}
+                {execution.status === "EN_COURS" ? "En cours" :
+                 execution.status === "TERMINÉ" ? "Terminé" :
+                 execution.status === "ÉCHOUÉ" ? "Échoué" :
+                 execution.status}
               </Badge>
             </div>
             <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">

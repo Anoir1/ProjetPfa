@@ -88,7 +88,9 @@ export default function Dashboard() {
       
       // Charger les statistiques depuis l'API
       try {
-        const stats = await userService.getUserStats(currentUserId)
+        // Forcer le recalcul des statistiques côté serveur
+        const stats = await userService.getUserStats(currentUserId, true)
+        console.log("Statistiques utilisateur récupérées:", stats)
         setUserStats(stats)
       } catch (error) {
         console.error("Erreur lors du chargement des statistiques:", error)

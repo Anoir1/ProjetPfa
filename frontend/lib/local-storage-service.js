@@ -241,21 +241,150 @@ const localStorageService = {
   deleteUser: (id) => {
     try {
       const users = localStorageService.getUsers();
-      const filteredUsers = users.filter(user => user.id !== id);
-      localStorage.setItem('users', JSON.stringify(filteredUsers));
+      const updatedUsers = users.filter(user => user.id !== id);
+      localStorage.setItem('users', JSON.stringify(updatedUsers));
       
-      // Supprimer également tous les agents et exécutions de cet utilisateur
+      // Supprimer également les agents associés à cet utilisateur
       const agents = localStorageService.getAgents();
-      const filteredAgents = agents.filter(agent => agent.userId !== id);
-      localStorage.setItem('agents', JSON.stringify(filteredAgents));
+      const updatedAgents = agents.filter(agent => agent.userId !== id);
+      localStorage.setItem('agents', JSON.stringify(updatedAgents));
       
+      // Supprimer également les exécutions associées à cet utilisateur
       const executions = localStorageService.getExecutions();
-      const filteredExecutions = executions.filter(execution => execution.userId !== id);
-      localStorage.setItem('executions', JSON.stringify(filteredExecutions));
+      const updatedExecutions = executions.filter(execution => execution.userId !== id);
+      localStorage.setItem('executions', JSON.stringify(updatedExecutions));
+      
+      // Supprimer également les résultats d'analyse associés à cet utilisateur
+      const analysisResults = localStorageService.getAnalysisResults();
+      const updatedAnalysisResults = analysisResults.filter(result => result.userId !== id);
+      localStorage.setItem('analysis_results', JSON.stringify(updatedAnalysisResults));
       
       return true;
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'utilisateur:', error);
+      return false;
+    }
+  },
+  
+  // Résultats d'analyse
+  getAnalysisResults: () => {
+    try {
+      const resultsStr = localStorage.getItem('analysis_results');
+      return resultsStr ? JSON.parse(resultsStr) : [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des résultats d\'analyse:', error);
+      return [];
+    }
+  },
+  
+  getAnalysisResultsByExecutionId: (executionId) => {
+    try {
+      const results = localStorageService.getAnalysisResults();
+      return results.filter(result => result.executionId === executionId);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des résultats d\'analyse par exécution:', error);
+      return [];
+    }
+  },
+  
+  getAnalysisResultsByAgentId: (agentId) => {
+    try {
+      const results = localStorageService.getAnalysisResults();
+      return results.filter(result => result.agentId === agentId);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des résultats d\'analyse par agent:', error);
+      return [];
+    }
+  },
+  
+  getAnalysisResultsByUserId: (userId) => {
+    try {
+      const results = localStorageService.getAnalysisResults();
+      return results.filter(result => result.userId === userId);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des résultats d\'analyse par utilisateur:', error);
+      return [];
+    }
+  },
+  
+  getAnalysisResultById: (id) => {
+    try {
+      const results = localStorageService.getAnalysisResults();
+      return results.find(result => result.id === id) || null;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du résultat d\'analyse:', error);
+      return null;
+    }
+  },
+  
+  saveAnalysisResult: (analysisResult) => {
+    try {
+      // Vérifier si l'ID est fourni
+      if (!analysisResult.id) {
+        analysisResult.id = `analysis_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      }
+      
+      // Vérifier si la date de création est fournie
+      if (!analysisResult.createdAt) {
+        analysisResult.createdAt = new Date().toISOString();
+      }
+      
+      // Récupérer les résultats existants
+      const results = localStorageService.getAnalysisResults();
+      
+      // Vérifier si le résultat existe déjà
+      const existingIndex = results.findIndex(result => result.id === analysisResult.id);
+      
+      if (existingIndex >= 0) {
+        // Mettre à jour le résultat existant
+        results[existingIndex] = { ...results[existingIndex], ...analysisResult };
+      } else {
+        // Ajouter le nouveau résultat
+        results.push(analysisResult);
+      }
+      
+      // Sauvegarder les résultats mis à jour
+      localStorage.setItem('analysis_results', JSON.stringify(results));
+      
+      return analysisResult;
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du résultat d\'analyse:', error);
+      return null;
+    }
+  },
+  
+  deleteAnalysisResult: (id) => {
+    try {
+      const results = localStorageService.getAnalysisResults();
+      const updatedResults = results.filter(result => result.id !== id);
+      localStorage.setItem('analysis_results', JSON.stringify(updatedResults));
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de la suppression du résultat d\'analyse:', error);
+      return false;
+    }
+  },
+  
+  deleteAnalysisResultsByExecutionId: (executionId) => {
+    try {
+      const results = localStorageService.getAnalysisResults();
+      const updatedResults = results.filter(result => result.executionId !== executionId);
+      localStorage.setItem('analysis_results', JSON.stringify(updatedResults));
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de la suppression des résultats d\'analyse par exécution:', error);
+      return false;
+    }
+  },
+  
+  deleteAnalysisResultsByAgentId: (agentId) => {
+    try {
+      const results = localStorageService.getAnalysisResults();
+      const updatedResults = results.filter(result => result.agentId !== agentId);
+      localStorage.setItem('analysis_results', JSON.stringify(updatedResults));
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de la suppression des résultats d\'analyse par agent:', error);
       return false;
     }
   }

@@ -6,8 +6,9 @@ import com.optiagent.backend.model.dto.ProfileUpdateRequest;
 import com.optiagent.backend.repository.UserRepository;
 import com.optiagent.backend.service.AgentService;
 import com.optiagent.backend.service.ExecutionService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,14 +19,24 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AgentService agentService;
+    private AgentService agentService;
     private final ExecutionService executionService;
+    
+    @Autowired
+    public UserService(UserRepository userRepository, 
+                      PasswordEncoder passwordEncoder,
+                      @Lazy AgentService agentService,
+                      ExecutionService executionService) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.agentService = agentService;
+        this.executionService = executionService;
+    }
 
     public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -177,8 +188,34 @@ public class UserService {
         int totalAgents = agentService.getAgentsByUserId(userId).size();
         user.setTotalAgents(totalAgents);
         
-        // Pour l'instant, nous ne pouvons pas calculer les exécutions car elles sont stockées dans localStorage
-        // Mais nous pouvons au moins mettre à jour le nombre d'agents
+        // Calculer les statistiques d'exécution
+        try {
+            // Récupérer toutes les exécutions de l'utilisateur
+            var executions = executionService.getExecutionsByUserId(userId);
+            
+            // Compter le nombre total d'exécutions
+            int totalExecutions = executions.size();
+            
+            // Compter les exécutions réussies (statut "TERMINÉ")
+            int successfulExecutions = (int) executions.stream()
+                .filter(e -> "TERMINÉ".equals(e.getStatus()))
+                .count();
+            
+            // Compter les exécutions échouées (statut "ÉCHOUÉ")
+            int failedExecutions = (int) executions.stream()
+                .filter(e -> "ÉCHOUÉ".equals(e.getStatus()))
+                .count();
+            
+            // Mettre à jour les statistiques de l'utilisateur
+            user.setTotalExecutions(totalExecutions);
+            user.setSuccessfulExecutions(successfulExecutions);
+            user.setFailedExecutions(failedExecutions);
+            
+            log.info("Statistiques calculées pour l'utilisateur {}: {} agents, {} exécutions totales, {} réussies, {} échouées", 
+                    userId, totalAgents, totalExecutions, successfulExecutions, failedExecutions);
+        } catch (Exception e) {
+            log.error("Erreur lors du calcul des statistiques d'exécution: {}", e.getMessage());
+        }
         
         // Sauvegarder les statistiques mises à jour
         return userRepository.save(user);

@@ -11,6 +11,8 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { agentService } from "@/lib/agent-service"
 import { fileService } from "@/lib/file-service"
+import { executionService } from "@/lib/execution-service"
+import { userService } from "@/lib/user-service"
 
 export default function ExecuteAgentPage() {
   const router = useRouter()
@@ -24,7 +26,17 @@ export default function ExecuteAgentPage() {
   const [isExecuting, setIsExecuting] = useState(false)
   const [executionProgress, setExecutionProgress] = useState(0)
   const [executionResults, setExecutionResults] = useState(null)
+  const [currentExecution, setCurrentExecution] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("documents")
+
+  // Effet pour basculer vers l'onglet Résultats lorsque les résultats sont disponibles
+  useEffect(() => {
+    if (executionResults) {
+      console.log("Résultats disponibles, basculement vers l'onglet Résultats");
+      setActiveTab("results");
+    }
+  }, [executionResults]);
 
   // Effet pour charger les données de l'agent, les factures et l'ordre de mission
   useEffect(() => {
@@ -188,6 +200,16 @@ export default function ExecuteAgentPage() {
     setIsExecuting(true);
     setExecutionProgress(10);
     setError("");
+    
+    // Créer une nouvelle exécution dans la base de données
+    try {
+      const newExecution = await executionService.startExecution(agent.id);
+      console.log("Nouvelle exécution créée:", newExecution);
+      setCurrentExecution(newExecution);
+    } catch (error) {
+      console.error("Erreur lors de la création de l'exécution:", error);
+      // Continuer même si l'enregistrement de l'exécution a échoué
+    }
 
     try {
       console.log("Début de l'exécution de l'agent:", agent.id);
@@ -385,18 +407,95 @@ export default function ExecuteAgentPage() {
         const results = await response.json();
         console.log("Résultats de l'analyse:", results);
         
+        // Enregistrer les résultats dans la base de données si une exécution a été créée
+        if (currentExecution && currentExecution.id) {
+          try {
+            const updatedExecution = await executionService.saveAnalysisResults(currentExecution.id, results);
+            console.log("Résultats enregistrés dans la base de données:", updatedExecution);
+            
+            // Récupérer l'ID de l'utilisateur actuel
+            const userStr = localStorage.getItem('opti_agent_user');
+            if (userStr) {
+              try {
+                const user = JSON.parse(userStr);
+                // Rafraîchir les statistiques utilisateur
+                await userService.getUserStats(user.id);
+                console.log("Statistiques utilisateur mises à jour");
+              } catch (e) {
+                console.error("Erreur lors du parsing de l'utilisateur:", e);
+              }
+            }
+          } catch (error) {
+            console.error("Erreur lors de l'enregistrement des résultats:", error);
+            // Continuer même si l'enregistrement des résultats a échoué
+          }
+        } else {
+          console.warn("Impossible d'enregistrer les résultats: aucune exécution en cours");
+        }
+        
         setExecutionProgress(100);
         setExecutionResults(results);
         setIsExecuting(false);
+        
+        // Basculer automatiquement vers l'onglet Résultats
+        setActiveTab("results");
       } catch (error) {
         console.error("Erreur lors de la connexion à l'API FastAPI:", error);
         setError(`Impossible de se connecter à l'API FastAPI. Vérifiez que le serveur est en cours d'exécution sur ${fastApiUrl}`);
+        
+        // Marquer l'exécution comme échouée si elle existe
+        if (currentExecution && currentExecution.id) {
+          try {
+            await executionService.failExecution(currentExecution.id, error.message || "Erreur de connexion à l'API FastAPI");
+            console.log("Exécution marquée comme échouée");
+            
+            // Récupérer l'ID de l'utilisateur actuel
+            const userStr = localStorage.getItem('opti_agent_user');
+            if (userStr) {
+              try {
+                const user = JSON.parse(userStr);
+                // Rafraîchir les statistiques utilisateur
+                await userService.getUserStats(user.id);
+                console.log("Statistiques utilisateur mises à jour");
+              } catch (e) {
+                console.error("Erreur lors du parsing de l'utilisateur:", e);
+              }
+            }
+          } catch (execError) {
+            console.error("Erreur lors de la mise à jour du statut de l'exécution:", execError);
+          }
+        }
+        
         setIsExecuting(false);
         // Ne pas relancer l'erreur, on la gère ici
       }
     } catch (error) {
       console.error("Erreur lors de l'exécution de l'agent:", error);
       setError(`Une erreur s'est produite lors de l'exécution de l'agent: ${error.message}`);
+      
+      // Marquer l'exécution comme échouée si elle existe
+      if (currentExecution && currentExecution.id) {
+        try {
+          await executionService.failExecution(currentExecution.id, error.message || "Erreur lors de l'exécution de l'agent");
+          console.log("Exécution marquée comme échouée");
+          
+          // Récupérer l'ID de l'utilisateur actuel
+          const userStr = localStorage.getItem('opti_agent_user');
+          if (userStr) {
+            try {
+              const user = JSON.parse(userStr);
+              // Rafraîchir les statistiques utilisateur
+              await userService.getUserStats(user.id);
+              console.log("Statistiques utilisateur mises à jour");
+            } catch (e) {
+              console.error("Erreur lors du parsing de l'utilisateur:", e);
+            }
+          }
+        } catch (execError) {
+          console.error("Erreur lors de la mise à jour du statut de l'exécution:", execError);
+        }
+      }
+      
       setIsExecuting(false);
     }
   };
@@ -459,7 +558,7 @@ export default function ExecuteAgentPage() {
             </Card>
           )}
 
-          <Tabs defaultValue="documents">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-4">
               <TabsTrigger value="documents">Documents</TabsTrigger>
               <TabsTrigger value="results">Résultats</TabsTrigger>

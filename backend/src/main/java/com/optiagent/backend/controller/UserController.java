@@ -30,10 +30,20 @@ public class UserController {
     }
 
     @GetMapping("/{id}/stats")
-    public ResponseEntity<Map<String, Integer>> getUserStats(@PathVariable String id) {
+    public ResponseEntity<Map<String, Integer>> getUserStats(
+            @PathVariable String id,
+            @RequestParam(name = "recalculate", required = false, defaultValue = "false") boolean recalculate) {
         try {
-            // Calculer les statistiques à partir de la base de données
-            User user = userService.calculateUserStats(id);
+            // Récupérer l'utilisateur avec ses statistiques
+            User user;
+            
+            if (recalculate) {
+                // Forcer le recalcul des statistiques
+                user = userService.calculateUserStats(id);
+            } else {
+                // Utiliser les statistiques existantes
+                user = userService.getUserById(id);
+            }
             
             Map<String, Integer> stats = new HashMap<>();
             

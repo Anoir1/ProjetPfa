@@ -126,7 +126,7 @@ export const userService = {
   },
   
   // Récupérer les statistiques d'un utilisateur
-  getUserStats: async (userId = getCurrentUserId()) => {
+  getUserStats: async (userId = getCurrentUserId(), forceRecalculate = false) => {
     if (!userId) return null;
     
     if (USE_LOCAL_STORAGE) {
@@ -142,7 +142,13 @@ export const userService = {
     }
     
     try {
-      const response = await fetch(`${API_URL}/users/${userId}/stats`, {
+      // Construire l'URL avec le paramètre de recalcul si nécessaire
+      let url = `${API_URL}/users/${userId}/stats`;
+      if (forceRecalculate) {
+        url += '?recalculate=true';
+      }
+      
+      const response = await fetch(url, {
         method: 'GET',
         headers: getHeaders()
       });

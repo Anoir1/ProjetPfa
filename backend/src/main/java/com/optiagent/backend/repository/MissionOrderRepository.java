@@ -9,4 +9,6 @@ import java.util.Optional;
 @Repository
 public interface MissionOrderRepository extends MongoRepository<MissionOrder, String> {
     Optional<MissionOrder> findByAgentId(String agentId);
+    
+    void deleteByAgentId(String agentId);
 }

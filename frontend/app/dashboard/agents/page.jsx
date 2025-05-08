@@ -153,6 +153,25 @@ export default function AgentsManagementPage() {
       
       setAgents(updatedAgents);
       setShowEditDialog(false);
+      
+      // Récupérer l'ID de l'utilisateur actuel
+      const userStr = localStorage.getItem('opti_agent_user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          // Rafraîchir les statistiques utilisateur en appelant directement l'API
+          const response = await fetch(`http://localhost:8081/api/users/${user.id}/stats?recalculate=true`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          console.log("Statistiques utilisateur mises à jour après modification d'agent");
+        } catch (e) {
+          console.error("Erreur lors de la mise à jour des statistiques:", e);
+        }
+      }
     } catch (error) {
       console.error("Error updating agent:", error);
     }
@@ -166,12 +185,31 @@ export default function AgentsManagementPage() {
       const updatedAgents = agents.filter(agent => agent.id !== id);
       setAgents(updatedAgents);
       
-      // Forcer le rechargement de la page pour mettre à jour les statistiques
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Afficher un message de confirmation
+      alert("Agent supprimé avec succès.");
+      
+      // Mettre à jour les statistiques en arrière-plan sans redirection
+      try {
+        // Récupérer l'ID de l'utilisateur actuel
+        const userStr = localStorage.getItem('opti_agent_user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          // Rafraîchir les statistiques utilisateur en appelant directement l'API
+          await fetch(`http://localhost:8081/api/users/${user.id}/stats?recalculate=true`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          console.log("Statistiques utilisateur mises à jour après suppression d'agent");
+        }
+      } catch (e) {
+        console.error("Erreur lors de la mise à jour des statistiques:", e);
+      }
     } catch (error) {
       console.error("Error deleting agent:", error);
+      alert("Erreur lors de la suppression de l'agent.");
     }
   }
   

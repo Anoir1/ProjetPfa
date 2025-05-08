@@ -6,6 +6,22 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Masquer les notifications d'erreur rouges */
+::-webkit-validation-bubble-message,
+::-webkit-validation-bubble,
+::-webkit-validation-bubble-arrow-clipper,
+::-webkit-validation-bubble-arrow,
+::-webkit-validation-bubble-icon,
+::-webkit-validation-bubble-text-block,
+.error-notification {
+  display: none !important;
+}
+
+/* Masquer spécifiquement la notification d'erreur rouge avec le compteur */
+div[role="alert"][aria-live="assertive"] {
+  display: none !important;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

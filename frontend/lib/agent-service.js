@@ -283,6 +283,23 @@ export const agentService = {
         throw new Error('Erreur lors de la mise à jour de l\'agent');
       }
       
+      // Après la mise à jour réussie, forcer la mise à jour des statistiques utilisateur
+      try {
+        // Récupérer l'ID de l'utilisateur actuel
+        const userId = getCurrentUserId();
+        if (userId) {
+          // Appeler directement l'API pour forcer le recalcul des statistiques
+          await fetch(`${API_URL}/users/${userId}/stats?recalculate=true`, {
+            method: 'GET',
+            headers: getHeaders()
+          });
+          console.log('Statistiques utilisateur mises à jour après modification d\'agent');
+        }
+      } catch (statsError) {
+        console.error('Erreur lors de la mise à jour des statistiques:', statsError);
+        // Ne pas échouer l'opération principale si la mise à jour des statistiques échoue
+      }
+      
       return await response.json();
     } catch (error) {
       console.error('Erreur:', error);
@@ -291,26 +308,48 @@ export const agentService = {
   },
   
   deleteAgent: async (id) => {
-    if (USE_LOCAL_STORAGE) {
-      return localStorageService.deleteAgent(id);
+    if (!id) {
+      console.error('ID d\'agent non fourni');
+      return false;
     }
     
     try {
-      // Supprimer d'abord toutes les exécutions associées à cet agent
-      const executions = await executionService.getExecutionsByAgentId(id);
-      for (const execution of executions) {
-        await executionService.deleteExecution(execution.id);
-      }
-      
-      // Ensuite, supprimer l'agent
-      const response = await fetch(`${API_URL}/agents/${id}`, {
+      // Utiliser l'API pour supprimer l'agent
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/agents/${id}`;
+      const response = await fetch(apiUrl, {
         method: 'DELETE',
-        headers: getHeaders()
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        }
       });
       
       if (!response.ok) {
-        throw new Error('Erreur lors de la suppression de l\'agent');
+        throw new Error(`Erreur lors de la suppression de l'agent: ${response.status}`);
       }
+      
+      // Mettre à jour les statistiques de l'utilisateur
+      try {
+        // Récupérer l'ID de l'utilisateur actuel
+        const userStr = localStorage.getItem('opti_agent_user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          // Rafraîchir les statistiques utilisateur en appelant directement l'API
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/users/${user.id}/stats?recalculate=true`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+            }
+          });
+        }
+      } catch (e) {
+        console.error("Erreur lors de la mise à jour des statistiques:", e);
+      }
+      
+      // Vider le cache local des exécutions pour forcer un rafraîchissement
+      // lors de la prochaine visite de la page d'historique
+      localStorage.removeItem('opti_agent_executions_cache');
       
       return true;
     } catch (error) {

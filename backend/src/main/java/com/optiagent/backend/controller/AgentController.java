@@ -1,7 +1,7 @@
 package com.optiagent.backend.controller;
 
 import com.optiagent.backend.model.Agent;
-import com.optiagent.backend.model.Invoice;
+import com.optiagent.backend.model.InvoiceFile;
 import com.optiagent.backend.model.MissionOrder;
 import com.optiagent.backend.model.dto.AgentRequest;
 import com.optiagent.backend.model.dto.InvoiceRequest;
@@ -71,13 +71,13 @@ public class AgentController {
         return ResponseEntity.notFound().build();
     }
 
-    // Invoice endpoints
+    // Invoice File endpoints
     @GetMapping("/{agentId}/invoices")
-    public ResponseEntity<List<Invoice>> getInvoicesByAgentId(@PathVariable String agentId) {
+    public ResponseEntity<List<InvoiceFile>> getInvoiceFilesByAgentId(@PathVariable String agentId) {
         if (!agentService.getAgentById(agentId).isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(agentService.getInvoicesByAgentId(agentId));
+        return ResponseEntity.ok(agentService.getInvoiceFilesByAgentId(agentId));
     }
 
     @PostMapping("/{agentId}/invoices")
@@ -89,18 +89,18 @@ public class AgentController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/invoices/{invoiceId}")
-    public ResponseEntity<Invoice> getInvoiceById(@PathVariable String invoiceId) {
-        return agentService.getInvoiceById(invoiceId)
+    @GetMapping("/invoices/{invoiceFileId}")
+    public ResponseEntity<InvoiceFile> getInvoiceFileById(@PathVariable String invoiceFileId) {
+        return agentService.getInvoiceFileById(invoiceFileId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @DeleteMapping("/{agentId}/invoices/{invoiceId}")
-    public ResponseEntity<Void> deleteInvoice(
+    @DeleteMapping("/{agentId}/invoices/{invoiceFileId}")
+    public ResponseEntity<Void> deleteInvoiceFile(
             @PathVariable String agentId,
-            @PathVariable String invoiceId) {
-        if (agentService.deleteInvoice(agentId, invoiceId)) {
+            @PathVariable String invoiceFileId) {
+        if (agentService.deleteInvoiceFile(agentId, invoiceFileId)) {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
