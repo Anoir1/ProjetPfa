@@ -24,7 +24,7 @@ public class FraudService {
         this.restTemplate = restTemplate;
     }
 
-    public FraudDetectionResult detectFraude(List<MultipartFile> factures, MultipartFile ordreDeMission) throws IOException {
+    public FraudDetectionResult detectFraude(List<MultipartFile> factures, MultipartFile ordreDeMission,String id) throws IOException {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 

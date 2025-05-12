@@ -1,6 +1,7 @@
 package com.optiagent.backend.controller;
 
 import com.optiagent.backend.model.dto.FraudDetectionResult;
+import com.optiagent.backend.service.FraudResultService;
 import com.optiagent.backend.service.FraudService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -21,16 +22,20 @@ import java.util.List;
 public class FraudController {
 
     public final FraudService fraudService;
+    public final FraudResultService fraudResultService;
 
-    public FraudController(FraudService fraudService) {
+    public FraudController(FraudService fraudService,FraudResultService fraudResultService) {
         this.fraudService = fraudService;
+        this.fraudResultService=fraudResultService;
     }
 @PostMapping(path = "/fraud/detect",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FraudDetectionResult> detectFraud(
             @RequestParam("factures") List<MultipartFile> factures,
-            @RequestParam("ordre_de_mission") MultipartFile ordreDeMission) {
+            @RequestParam("ordre_de_mission") MultipartFile ordreDeMission,@RequestParam("id") String agentid) {
         try {
-            FraudDetectionResult result = fraudService.detectFraude(factures, ordreDeMission);
+            FraudDetectionResult result = fraudService.detectFraude(factures, ordreDeMission,agentid);
+            result=fraudResultService.saveFraudResult(result,agentid);
+
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
