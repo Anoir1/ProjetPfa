@@ -182,6 +182,14 @@ export default function ExecuteAgentPage() {
 
   // Fonction pour exécuter l'agent
   const handleExecuteAgent = async () => {
+    // Vérifier si l'utilisateur est connecté
+    const userStr = localStorage.getItem('opti_agent_user');
+    if (!userStr) {
+      console.log("Utilisateur non connecté, redirection vers la page de connexion");
+      router.push('/auth/login');
+      return;
+    }
+
     if (!agent) {
       setError("Aucun agent sélectionné");
       return;
@@ -216,9 +224,9 @@ export default function ExecuteAgentPage() {
       
       // Progression de l'exécution
       setExecutionProgress(30);
-      console.log("Préparation des données pour l'API FastAPI...");
+      console.log("Préparation des données pour l'API Spring...");
       
-      // Préparer les fichiers pour l'envoi à FastAPI
+      // Préparer les fichiers pour l'envoi à Spring
       let invoiceFiles = [];
       let missionOrderFile = null;
       
@@ -366,41 +374,88 @@ export default function ExecuteAgentPage() {
       }
       
       setExecutionProgress(70);
-      console.log("Envoi des données à l'API FastAPI...");
+      console.log("Préparation des données pour l'API Spring...");
       
-      // Créer un FormData pour envoyer les fichiers à FastAPI
+      // Vérifier les fichiers avant l'envoi
+      console.log("Factures à envoyer:", invoiceFiles.map(f => ({
+        name: f.name,
+        type: f.type,
+        size: f.size
+      })));
+      
+      if (missionOrderFile) {
+        console.log("Ordre de mission à envoyer:", {
+          name: missionOrderFile.name,
+          type: missionOrderFile.type,
+          size: missionOrderFile.size
+        });
+      }
+      
+      // Créer un FormData pour envoyer les fichiers à Spring
       const formData = new FormData();
       
       // Ajouter les factures
-      invoiceFiles.forEach(file => {
+      invoiceFiles.forEach((file, index) => {
+        console.log(`Ajout de la facture ${index + 1}:`, file.name);
         formData.append('factures', file);
       });
       
-      // Ajouter l'ordre de mission comme une liste (le backend attend une liste)
+      // Ajouter l'ordre de mission
       if (missionOrderFile) {
-        formData.append('ordre_mission', missionOrderFile);
+        console.log("Ajout de l'ordre de mission:", missionOrderFile.name);
+        formData.append('ordre_de_mission', missionOrderFile);
+      }
+
+      // Debug: Afficher le contenu du FormData
+      console.log("Contenu du FormData:");
+      for (let pair of formData.entries()) {
+        console.log(pair[0], pair[1].name, pair[1].type, pair[1].size);
       }
       
-      // URL de l'API FastAPI - vérifiez que cette URL est correcte et que le serveur est en cours d'exécution
-      const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8000/detecter_fraude/';
-      console.log("Envoi des données à l'API FastAPI:", fastApiUrl);
+      // URL de l'API Spring
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/fraud/detect`;
+      console.log("Envoi des données à l'API Spring:", apiUrl);
       
       try {
-        // Envoyer la requête à l'API FastAPI
-        const response = await fetch(fastApiUrl, {
+        // Récupérer le token d'autorisation depuis l'objet utilisateur
+        const userStr = localStorage.getItem('opti_agent_user');
+        if (!userStr) {
+          console.error("Utilisateur non connecté, redirection vers la page de connexion");
+          router.push('/auth/login');
+          return;
+        }
+
+        const user = JSON.parse(userStr);
+        if (!user || !user.token) {
+          console.error("Token non trouvé dans les données utilisateur, redirection vers la page de connexion");
+          router.push('/auth/login');
+          return;
+        }
+
+        console.log("Envoi de la requête avec le token:", user.token.substring(0, 10) + "...");
+        
+        // Envoyer la requête à l'API Spring
+        const response = await fetch(apiUrl, {
           method: 'POST',
           body: formData,
-          // Ajouter des en-têtes pour éviter les problèmes CORS
           headers: {
-            // Ne pas spécifier Content-Type car FormData le fait automatiquement avec la boundary
+            'Authorization': `Bearer ${user.token}`
           }
         });
         
         setExecutionProgress(90);
         
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Erreur lors de l'analyse: ${response.status} - ${errorText}`);
+          let errorMessage;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || 'Une erreur est survenue';
+          } catch (e) {
+            // Si la réponse n'est pas du JSON, on utilise le statut HTTP
+            errorMessage = `Erreur HTTP ${response.status}`;
+          }
+          console.error("Réponse d'erreur complète:", errorMessage);
+          throw new Error(`Erreur lors de l'analyse: ${response.status} - ${errorMessage}`);
         }
         
         // Récupérer les résultats
@@ -440,13 +495,13 @@ export default function ExecuteAgentPage() {
         // Basculer automatiquement vers l'onglet Résultats
         setActiveTab("results");
       } catch (error) {
-        console.error("Erreur lors de la connexion à l'API FastAPI:", error);
-        setError(`Impossible de se connecter à l'API FastAPI. Vérifiez que le serveur est en cours d'exécution sur ${fastApiUrl}`);
+        console.error("Erreur lors de la connexion à l'API Spring:", error);
+        setError(`Impossible de se connecter à l'API Spring. Vérifiez que le serveur est en cours d'exécution sur ${apiUrl}`);
         
         // Marquer l'exécution comme échouée si elle existe
         if (currentExecution && currentExecution.id) {
           try {
-            await executionService.failExecution(currentExecution.id, error.message || "Erreur de connexion à l'API FastAPI");
+            await executionService.failExecution(currentExecution.id, error.message || "Erreur de connexion à l'API Spring");
             console.log("Exécution marquée comme échouée");
             
             // Récupérer l'ID de l'utilisateur actuel
